@@ -1,5 +1,15 @@
-const reponse = await fetch('pieces-autos.json');
-const pieces = await reponse.json();
+import { ajoutListenersAvis, ajoutListenerEnvoyerAvis, afficherAvis } from "./avis.js";
+let pieces = window.localStorage.getItem("pieces");
+
+if (pieces === null){
+    pieces = await fetch('http://localhost:8081/pieces').then(pieces => pieces.json());
+    const valeurPieces = JSON.stringify(pieces); //Transformation des pièces en JSON
+    window.localStorage.setItem("pieces", valeurPieces);
+} else {
+    pieces = JSON.parse(pieces); //Renconstitution en mèmoire
+}
+
+ajoutListenerEnvoyerAvis ();
 
 function genererPieces(pieces){
     for (let i = 0; i < pieces.length; i++) {
@@ -9,6 +19,7 @@ function genererPieces(pieces){
         const sectionFiches = document.querySelector(".fiches");
         // Création d’une balise dédiée à une pièce automobile
         const pieceElement = document.createElement("article");
+        pieceElement.dataset.id = pieces[i].id
         // Création des balises 
         const imageElement = document.createElement("img");
         imageElement.src = article.image;
@@ -22,6 +33,9 @@ function genererPieces(pieces){
         descriptionElement.innerText = article.description ?? "Pas de description pour le moment.";
         const stockElement = document.createElement("p");
         stockElement.innerText = article.disponibilite ? "En stock" : "Rupture de stock";
+        const avisBouton = document.createElement("button");
+        avisBouton.dataset.id = article.id;
+        avisBouton.textContent = "Afficher les avis";
 
         sectionFiches.appendChild(pieceElement);
         pieceElement.appendChild(imageElement);
@@ -30,14 +44,26 @@ function genererPieces(pieces){
         pieceElement.appendChild(categorieElement);
         pieceElement.appendChild(descriptionElement);
         pieceElement.appendChild(stockElement);
-    }
+        pieceElement.appendChild(avisBouton);
+     }
+     ajoutListenersAvis();
 }
 genererPieces(pieces); //On génére toute les pièces
+
+for (let i=0; i<pieces.length; i++){
+    const id = pieces[i].id;
+    const avisJSON = window.localStorage.getItem(`avis-piece-${id}`);
+    const avis = JSON.parse(avisJSON);
+    if(avis !== null){
+        const pieceElement = document.querySelector(`article[data-id="${id}"]`);
+        afficherAvis(pieceElement, avis)
+    }
+}
  //BOUTON
 const boutonTrier = document.querySelector(".btn-trier");
-boutonTrier.addEventListener("click", function () {
+boutonTrier.addEventListener("click", () => {
     const pieceOrdonnees = Array.from(pieces);
-    pieceOrdonnees.sort(function(a, b){
+    pieceOrdonnees.sort((a, b) => {
         return a.prix - b.prix;
     });
     document.querySelector(".fiches").innerHTML = "";           //On efface l'écran
@@ -53,7 +79,7 @@ boutonDecroissant.addEventListener("click", function () {
     genererPieces(pieceOrdonnees);
 }) 
 const boutonFiltrer = document.querySelector(".btn-filtrer");
-boutonFiltrer.addEventListener("click", function () {
+boutonFiltrer.addEventListener("click", () => {
     const piecesFiltrees = pieces.filter (function(pieces){
         return pieces.prix <= 35;
     })
@@ -104,4 +130,8 @@ inputPrixMax.addEventListener("input", function () {
     })
     document.querySelector(".fiches").innerHTML="";
     genererPieces(piecesFiltrees);
+})
+const boutonMettreAJour = document.querySelector(".btn-maj");
+boutonMettreAJour.addEventListener("click", () => {
+    window.localStorage.removeItem("pieces");
 })
